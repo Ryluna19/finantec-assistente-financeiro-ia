@@ -89,3 +89,40 @@ def formatar_moeda(valor: float) -> str:
         .replace(".", ",")
         .replace("X", ".")
     )
+
+def calcular_simulacoes_de_metas(perfil_usuario: dict) -> list[dict]:
+    simulacoes = []
+
+    for meta in perfil_usuario["objetivos_financeiros"]:
+        valor_meta = float(meta["valor_meta"])
+        valor_atual = float(meta["valor_atual"])
+        prazo_meses = int(meta["prazo_meses"])
+
+        simulacao = calcular_meta_mensal(
+            valor_meta=valor_meta,
+            prazo_meses=prazo_meses,
+            valor_ja_reservado=valor_atual,
+        )
+
+        valor_restante = simulacao["valor_restante"]
+        valor_mensal_necessario = simulacao["valor_mensal_necessario"]
+
+        simulacoes.append(
+            {
+                "nome": meta["nome"],
+                "valor_meta": valor_meta,
+                "valor_meta_formatado": formatar_moeda(valor_meta),
+                "valor_atual": valor_atual,
+                "valor_atual_formatado": formatar_moeda(valor_atual),
+                "valor_restante": valor_restante,
+                "valor_restante_formatado": formatar_moeda(valor_restante),
+                "prazo_meses": prazo_meses,
+                "valor_mensal_necessario": valor_mensal_necessario,
+                "valor_mensal_necessario_formatado": formatar_moeda(
+                    valor_mensal_necessario
+                ),
+                "prioridade": meta["prioridade"],
+            }
+        )
+
+    return simulacoes

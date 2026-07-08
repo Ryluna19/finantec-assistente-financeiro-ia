@@ -26,6 +26,11 @@ def obter_cliente() -> genai.Client:
 
     return genai.Client(api_key=api_key)
 
+def limpar_formatacao_resposta(resposta: str) -> str:
+    resposta_limpa = resposta.replace("`", "")
+    resposta_limpa = resposta_limpa.replace("$", r"\$")
+
+    return resposta_limpa.strip()
 
 def gerar_resposta_finantec(
     pergunta_usuario: str,
@@ -57,7 +62,7 @@ def gerar_resposta_finantec(
                 "Tente reformular sua pergunta."
             )
 
-        return resposta.strip()
+        return limpar_formatacao_resposta(resposta)
 
     except Exception as erro:
         raise RuntimeError(
