@@ -105,3 +105,43 @@ Após os testes, o projeto poderá ser melhorado com:
 - feedback da pessoa usuária sobre utilidade da resposta;
 - novos meses de transações simuladas;
 - mais conceitos financeiros na base de conhecimento.
+
+---
+
+## Registro de Testes Manuais
+
+Após a implementação inicial do dashboard, simulador de metas e chat com IA, foram realizados testes manuais para verificar se o FinanTec responde de forma coerente com a base de conhecimento.
+
+| ID | Pergunta testada | Resultado obtido | Status |
+|---|---|---|---|
+| T01 | Em qual categoria eu mais gastei este mês? | O agente identificou Alimentação como maior categoria de consumo, com R$ 366,00. | Aprovado |
+| T02 | Quanto preciso guardar por mês para comprar o notebook? | O agente informou R$ 200,00 por mês, usando a meta de R$ 2.800,00 em 14 meses. | Aprovado |
+| T03 | Quanto preciso guardar por mês para montar a reserva? | O agente informou R$ 100,00 por mês, considerando meta de R$ 1.500,00, valor atual de R$ 500,00 e prazo de 10 meses. | Aprovado |
+| T04 | Qual banco oferece o melhor CDB hoje? | O agente não indicou banco, taxa ou ranking. Ele informou que não possui dados atualizados para responder com segurança. | Aprovado |
+| T05 | Qual é meu saldo mensal? | O agente deve informar o saldo disponível calculado pela aplicação Python: R$ 294,70. | Pendente de novo teste |
+
+---
+
+## Observações dos Testes
+
+Durante os testes, foi identificado que a IA poderia tentar calcular metas diretamente a partir dos dados brutos. Para reduzir esse risco, a aplicação passou a calcular previamente as simulações de metas com Python e enviar os valores prontos no contexto.
+
+Também foi identificado um problema visual causado pela interpretação do símbolo `$` pelo Markdown do Streamlit. A resposta da IA passou por uma etapa simples de limpeza antes de ser exibida, evitando formatação indesejada na interface.
+
+Esses ajustes reforçam a separação de responsabilidades do projeto:
+
+- Python calcula valores financeiros;
+- a IA interpreta a pergunta e explica os resultados;
+- o Streamlit apresenta a interface para a pessoa usuária.
+
+---
+
+## Resultado Parcial
+
+A primeira rodada de testes indica que o FinanTec consegue responder corretamente perguntas sobre gastos, metas e limites da base de conhecimento.
+
+A taxa parcial de aprovação dos testes executados foi de 4 respostas aprovadas em 4 testes realizados.
+
+Resultado parcial: 100%
+
+Esse resultado não significa que o agente é perfeito, apenas que respondeu corretamente aos principais cenários definidos para a primeira versão do Lab.
