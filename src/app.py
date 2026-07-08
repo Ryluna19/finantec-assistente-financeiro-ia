@@ -8,7 +8,9 @@ from analytics import (
     calcular_meta_mensal,
     calcular_resumo_financeiro,
     calcular_simulacoes_de_metas,
+    filtrar_transacoes_por_mes,
     formatar_moeda,
+    listar_meses_disponiveis,
 )
 from data_loader import (
     carregar_conceitos_financeiros,
@@ -18,7 +20,6 @@ from data_loader import (
     carregar_transacoes,
 )
 from prompts import montar_contexto
-
 
 st.set_page_config(
     page_title="FinanTec",
@@ -35,37 +36,82 @@ def carregar_dados():
     conceitos_financeiros = carregar_conceitos_financeiros()
     produtos_financeiros = carregar_produtos_financeiros()
 
-    resumo = calcular_resumo_financeiro(transacoes)
-    gastos_por_categoria = calcular_gastos_por_categoria(transacoes)
-    simulacoes_metas = calcular_simulacoes_de_metas(perfil_usuario)
- 
-    contexto = montar_contexto(
-        perfil_usuario=perfil_usuario,
-        resumo_financeiro=resumo,
-        gastos_por_categoria=gastos_por_categoria,
-        simulacoes_metas=simulacoes_metas,
-        historico_atendimento=historico_atendimento,
-        conceitos_financeiros=conceitos_financeiros,
-        produtos_financeiros=produtos_financeiros,
+    return (
+        perfil_usuario,
+        transacoes,
+        historico_atendimento,
+        conceitos_financeiros,
+        produtos_financeiros,
     )
 
-    return perfil_usuario, resumo, gastos_por_categoria, contexto
+
+(
+    perfil_usuario,
+    transacoes,
+    historico_atendimento,
+    conceitos_financeiros,
+    produtos_financeiros,
+) = carregar_dados()
 
 
-perfil_usuario, resumo, gastos_por_categoria, contexto = carregar_dados()
+meses_disponiveis = listar_meses_disponiveis(transacoes)
+
+st.sidebar.title("Filtros")
+mes_selecionado = st.sidebar.selectbox(
+    "Período analisado",
+    meses_disponiveis,
+    index=len(meses_disponiveis) - 1,
+)
+
+transacoes_filtradas = filtrar_transacoes_por_mes(
+    transacoes,
+    mes_selecionado,
+)
+
+resumo = calcular_resumo_financeiro(transacoes_filtradas)
+gastos_por_categoria = calcular_gastos_por_categoria(transacoes_filtradas)
+simulacoes_metas = calcular_simulacoes_de_metas(perfil_usuario)
+
+contexto = montar_contexto(
+    perfil_usuario=perfil_usuario,
+    resumo_financeiro=resumo,
+    gastos_por_categoria=gastos_por_categoria,
+    simulacoes_metas=simulacoes_metas,
+    historico_atendimento=historico_atendimento,
+    conceitos_financeiros=conceitos_financeiros,
+    produtos_financeiros=produtos_financeiros,
+)
+
+contexto = f"""
+PERÍODO ANALISADO:
+{mes_selecionado}
+
+{contexto}
+""".strip()
 
 
-if "mensagens" not in st.session_state:
-    st.session_state.mensagens = [
+def criar_mensagem_inicial(mes: str) -> list[dict]:
+    return [
         {
             "role": "assistant",
             "content": (
-                "Olá! Sou o FinanTec. Posso ajudar você a entender seus "
-                "gastos, metas e conceitos financeiros básicos."
+                f"Olá! Sou o FinanTec. Estou analisando o período "
+                f"{mes}. Posso ajudar você a entender gastos, "
+                f"metas e conceitos financeiros básicos."
             ),
         }
     ]
 
+
+if "mensagens_por_mes" not in st.session_state:
+    st.session_state.mensagens_por_mes = {}
+
+if mes_selecionado not in st.session_state.mensagens_por_mes:
+    st.session_state.mensagens_por_mes[mes_selecionado] = criar_mensagem_inicial(
+        mes_selecionado
+    )
+
+mensagens_mes = st.session_state.mensagens_por_mes[mes_selecionado]
 
 st.title("💰 FinanTec")
 st.caption(
@@ -77,8 +123,10 @@ st.warning(
     "personalizada de investimento."
 )
 
+st.info(f"Período analisado: **{mes_selecionado}**")
 
-st.subheader("Resumo financeiro do mês")
+
+st.subheader("Resumo financeiro do período")
 
 coluna_receita, coluna_consumo, coluna_reserva, coluna_saldo = st.columns(4)
 
@@ -88,7 +136,7 @@ coluna_receita.metric(
 )
 
 coluna_consumo.metric(
-    "Gasto de consumo no mês",
+    "Gasto de consumo no período",
     formatar_moeda(resumo["despesas_do_mes"]),
 )
 
@@ -116,8 +164,9 @@ st.bar_chart(
 
 if resumo["maior_categoria"]:
     st.info(
-        f"A maior categoria de consumo foi **{resumo['maior_categoria']}**, "
-        f"com {formatar_moeda(resumo['maior_gasto'])}."
+        f"A maior categoria de consumo no período foi "
+        f"**{resumo['maior_categoria']}**, com "
+        f"{formatar_moeda(resumo['maior_gasto'])}."
     )
 
 
@@ -138,11 +187,7 @@ nome_meta_escolhida = st.selectbox(
     nomes_metas,
 )
 
-meta_escolhida = next(
-    meta
-    for meta in metas
-    if meta["nome"] == nome_meta_escolhida
-)
+meta_escolhida = next(meta for meta in metas if meta["nome"] == nome_meta_escolhida)
 
 valor_meta = float(meta_escolhida["valor_meta"])
 valor_atual = float(meta_escolhida["valor_atual"])
@@ -179,13 +224,13 @@ coluna_mensal.metric(
 if simulacao["valor_mensal_necessario"] > resumo["saldo_disponivel"]:
     st.error(
         "Para essa meta, o valor mensal necessário é maior que o saldo disponível "
-        "do mês. Pode ser necessário aumentar o prazo, reduzir gastos ou buscar "
-        "renda extra."
+        "do período selecionado. Pode ser necessário aumentar o prazo, reduzir "
+        "gastos ou buscar renda extra."
     )
 else:
     st.success(
         "Considerando apenas essa meta, o valor mensal necessário cabe no saldo "
-        "disponível deste mês."
+        "disponível do período selecionado."
     )
 
 st.caption(
@@ -200,18 +245,18 @@ st.subheader("Converse com o FinanTec")
 
 st.caption(
     "Teste perguntas como: “Em qual categoria eu mais gastei?”, "
-    "“Qual é meu saldo mensal?”, “Quanto preciso guardar para o notebook?” "
+    "“Qual é meu saldo?”, “Quanto preciso guardar para o notebook?” "
     "ou “Qual banco oferece o melhor CDB hoje?”"
 )
 
-for mensagem in st.session_state.mensagens:
+for mensagem in mensagens_mes:
     with st.chat_message(mensagem["role"]):
         st.markdown(mensagem["content"])
 
 pergunta_usuario = st.chat_input("Digite sua pergunta sobre organização financeira")
 
 if pergunta_usuario:
-    st.session_state.mensagens.append(
+    mensagens_mes.append(
         {
             "role": "user",
             "content": pergunta_usuario,
@@ -234,7 +279,7 @@ if pergunta_usuario:
                 resposta = str(erro)
                 st.error(resposta)
 
-    st.session_state.mensagens.append(
+    mensagens_mes.append(
         {
             "role": "assistant",
             "content": resposta,

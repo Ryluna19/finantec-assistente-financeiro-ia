@@ -126,3 +126,20 @@ def calcular_simulacoes_de_metas(perfil_usuario: dict) -> list[dict]:
         )
 
     return simulacoes
+def listar_meses_disponiveis(transacoes: pd.DataFrame) -> list[str]:
+    if "ano_mes" not in transacoes.columns:
+        transacoes = transacoes.copy()
+        transacoes["ano_mes"] = transacoes["data"].dt.to_period("M").astype(str)
+
+    return sorted(transacoes["ano_mes"].dropna().unique().tolist())
+
+
+def filtrar_transacoes_por_mes(
+    transacoes: pd.DataFrame,
+    ano_mes: str
+) -> pd.DataFrame:
+    if "ano_mes" not in transacoes.columns:
+        transacoes = transacoes.copy()
+        transacoes["ano_mes"] = transacoes["data"].dt.to_period("M").astype(str)
+
+    return transacoes[transacoes["ano_mes"] == ano_mes].copy()
